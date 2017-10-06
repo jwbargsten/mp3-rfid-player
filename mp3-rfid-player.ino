@@ -49,9 +49,10 @@ void loop() {
 #endif
 
   if(Serial.available() > 0) {
+    delay(100);
     MP3player.stopTrack();
     counter = -1;
-    delay(100);
+    
     while ((data1 = Serial.read()) >= 0) {
       if (data1 == 2) {
         counter = 0;
@@ -65,14 +66,13 @@ void loop() {
           /*Serial.println("du kommst hier nicht rein");*/
         }
         clearSerial();
-        delay(1000);
+        delay(100);
         break;
       } else if (counter >= 0 && counter < maxTagLength) {
         tagId[counter] = data1;
         ++counter;
       } 
     }
-    delay(100);
   }
 }
 
