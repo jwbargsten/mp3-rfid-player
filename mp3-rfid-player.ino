@@ -50,7 +50,7 @@ void loop() {
 
   if(Serial.available() > 0) {
     delay(100);
-    MP3player.stopTrack();
+    //MP3player.stopTrack();
     counter = -1;
     
     while ((data1 = Serial.read()) >= 0) {
