@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>                      
 #include <stdlib.h>     
+#include <avr/wdt.h>
 
 SdFat sd;
 SFEMP3Shield MP3player;
@@ -55,7 +56,7 @@ int initAuthorizedTags()
 
 void setup() {
   uint8_t result;
-
+wdt_enable(WDTO_8S);
   Serial.begin(9600);
 
   if (!sd.begin(SD_SEL, SPI_FULL_SPEED)) sd.initErrorHalt();
@@ -63,14 +64,13 @@ void setup() {
   if(!initAuthorizedTags()) sd.errorHalt("tag init failed");
   result = MP3player.begin();
 
-  MP3player.setVolume(10, 10);
-  
+  MP3player.setVolume(10, 10); 
 }
 
 int data1 = 0;
 int tagLength = 0;
 const int maxTagLength = 15;
-char tagId[maxTagLength];
+char tagId[maxTagLength + 1];
 int counter = -1;
 
 void loop() {
@@ -94,6 +94,7 @@ void loop() {
       } else if (data1 == 3 && counter < maxTagLength) {
         tagLength = counter;
         counter = -1;
+        tagId[tagLength] = '\0';
         int trackNum = tagToTrack();
         if(trackNum >= 0) {
           playSong(trackNum);
@@ -109,9 +110,12 @@ void loop() {
       } 
     }
   }
+  wdt_reset();
 }
 
 int tagToTrack() {
+  int result;
+  
   for (int i = 0; i < TAGS_MAX; ++i) {
     if(authorizedTags == NULL)
       continue;
@@ -119,6 +123,26 @@ int tagToTrack() {
       return i;
     }
   }
+  //Serial.println("du kommst hier nicht rein1");
+ 
+  //Serial.println("du kommst hier nicht rein2");
+  SdFile file;
+  
+  if (!file.open("UNKNOWN.TXT", O_CREAT | O_APPEND | O_WRITE)) return -1;
+  // if (!file.open("UNKNOWN.TXT", O_RDWR | O_CREAT | O_AT_END)) return -1;
+  noInterrupts();
+  //Serial.println("du kommst hier nicht rein3");
+  result = file.write(tagId, tagLength);
+  file.write('\n');
+  //Serial.println("du kommst hier nicht rein4");
+  file.sync();
+  file.close();
+  interrupts(); 
+   playBeep();
+  
+    delay(3000);
+
+ // Serial.println("du kommst hier nicht rein5");                                                                                                                                                                                                
   return -1;
 }
 
@@ -128,20 +152,29 @@ void clearSerial() {
   }
 }
 
-char trackName[256];
 int lastTrack = -1;
 
 void playSong(int trackNum) {
   uint8_t result;
 
+  char trackName[16];
   sprintf(trackName,"track%03d.mp3",trackNum);
   
   if ( MP3player.getState() != playback || trackNum != lastTrack) {
     MP3player.stopTrack();
     result = MP3player.playMP3(trackName);
+
     
       if (result == 0) {
         lastTrack = trackNum;
       }
   }
+}
+
+void playBeep() {
+  uint8_t result;
+if ( MP3player.getState() != playback) {
+   result = MP3player.playMP3("BEEP.MP3");
+}
+
 }
